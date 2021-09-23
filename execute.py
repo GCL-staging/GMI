@@ -6,6 +6,7 @@ import numpy as np
 import scipy.sparse as sp
 from models import GMI, LogReg
 from utils import process
+from cluster_eval import kmeans
 
 
 """command-line interface"""
@@ -124,33 +125,53 @@ train_lbls = torch.argmax(labels[0, idx_train], dim=1)
 # val_lbls = torch.argmax(labels[0, idx_val], dim=1)
 test_lbls = torch.argmax(labels[0, idx_test], dim=1)
 
-accs = []
+embeds = embeds[0]
 
-iter_num = process.find_epoch(args.hid_units, nb_classes, train_embs, train_lbls, test_embs, test_lbls)
-for _ in range(50): 
-    log = LogReg(args.hid_units, nb_classes)
-    opt = torch.optim.Adam(log.parameters(), lr=0.001, weight_decay=0.00001)
-    log.cuda()
+lbls = labels[0]
+lbls = torch.argmax(lbls, dim=1)
 
-    pat_steps = 0
-    best_acc = torch.zeros(1)
-    best_acc = best_acc.cuda()
-    for _ in range(iter_num):
-        log.train()
-        opt.zero_grad()
+nmi_list = []
+micro_f1_list = []
+macro_f1_list = []
 
-        logits = log(train_embs)
-        loss = xent(logits, train_lbls)
-        
-        loss.backward()
-        opt.step()
+for _ in range(10):
+    result = kmeans(embeds, lbls)
+    nmi_list.append(result['nmi'])
+    micro_f1_list.append(result['micro_f1'])
+    macro_f1_list.append(result['macro_f1'])
 
-    logits = log(test_embs)
-    preds = torch.argmax(logits, dim=1)
-    acc = torch.sum(preds == test_lbls).float() / test_lbls.shape[0]
-    print(acc * 100)
-    accs.append(acc * 100)
+print(f'dataset {args.dataset}')
+print(f'nmi {np.mean(nmi_list)} +- {np.std(nmi_list)}')
+print(f'micro_f1 {np.mean(micro_f1_list)} +- {np.std(micro_f1_list)}')
+print(f'macro_f1 {np.mean(macro_f1_list)} +- {np.std(macro_f1_list)}')
 
-accs = torch.stack(accs)
-print('Average accuracy:', accs.mean())
-print('STD:', accs.std())
+# accs = []
+#
+# iter_num = process.find_epoch(args.hid_units, nb_classes, train_embs, train_lbls, test_embs, test_lbls)
+# for _ in range(50):
+#     log = LogReg(args.hid_units, nb_classes)
+#     opt = torch.optim.Adam(log.parameters(), lr=0.001, weight_decay=0.00001)
+#     log.cuda()
+#
+#     pat_steps = 0
+#     best_acc = torch.zeros(1)
+#     best_acc = best_acc.cuda()
+#     for _ in range(iter_num):
+#         log.train()
+#         opt.zero_grad()
+#
+#         logits = log(train_embs)
+#         loss = xent(logits, train_lbls)
+#
+#         loss.backward()
+#         opt.step()
+#
+#     logits = log(test_embs)
+#     preds = torch.argmax(logits, dim=1)
+#     acc = torch.sum(preds == test_lbls).float() / test_lbls.shape[0]
+#     print(acc * 100)
+#     accs.append(acc * 100)
+#
+# accs = torch.stack(accs)
+# print('Average accuracy:', accs.mean())
+# print('STD:', accs.std())
