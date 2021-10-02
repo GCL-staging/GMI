@@ -6,7 +6,7 @@ import numpy as np
 import scipy.sparse as sp
 from models import GMI, LogReg
 from utils import process
-from cluster_eval import kmeans
+from cluster_eval import kmeans, logistic_regression
 
 
 """command-line interface"""
@@ -130,6 +130,7 @@ embeds = embeds[0]
 lbls = labels[0]
 lbls = torch.argmax(lbls, dim=1)
 
+# Task 1: Clustering
 nmi_list = []
 micro_f1_list = []
 macro_f1_list = []
@@ -141,7 +142,21 @@ for _ in range(10):
     macro_f1_list.append(result['macro_f1'])
 
 print(f'dataset {args.dataset}')
+print(f'=== Clustering ===')
 print(f'nmi {np.mean(nmi_list)} +- {np.std(nmi_list)}')
+print(f'micro_f1 {np.mean(micro_f1_list)} +- {np.std(micro_f1_list)}')
+print(f'macro_f1 {np.mean(macro_f1_list)} +- {np.std(macro_f1_list)}')
+
+# Task 2: Node Classification
+micro_f1_list = []
+macro_f1_list = []
+
+for _ in range(10):
+    result = logistic_regression(embeds, lbls, train_size=0.1)
+    micro_f1_list.append(result['micro_f1'])
+    macro_f1_list.append(result['macro_f1'])
+
+print(f'=== Node Classification ===')
 print(f'micro_f1 {np.mean(micro_f1_list)} +- {np.std(micro_f1_list)}')
 print(f'macro_f1 {np.mean(macro_f1_list)} +- {np.std(macro_f1_list)}')
 

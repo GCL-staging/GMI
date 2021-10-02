@@ -3,7 +3,9 @@ import torch
 import numpy as np
 from sklearn.cluster import KMeans
 from sklearn.metrics.cluster import normalized_mutual_info_score as NMI
-from sklearn.metrics import f1_score
+from sklearn.metrics import f1_score, accuracy_score
+from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import train_test_split
 
 
 def label_accuracy(pred: torch.Tensor, labels: torch.Tensor) -> float:
@@ -83,6 +85,23 @@ def kmeans(embeddings, labels):
     return {
         'acc': accuracy,
         'nmi': nmi,
+        'micro_f1': f1mi,
+        'macro_f1': f1ma
+    }
+
+
+def logistic_regression(embeddings, labels, train_size=0.5):
+    z = embeddings.detach().cpu().numpy()
+    y = labels.detach().cpu().numpy()
+    x_train, x_test, y_train, y_test = train_test_split(
+        z, y, test_size=1-train_size, random_state=12321)
+    classifier_ = LogisticRegression(multi_class='auto', solver='lbfgs', max_iter=1000)
+    classifier_.fit(x_train, y_train)
+    prediction = classifier_.predict(x_test)
+    accuracy = accuracy_score(prediction, y_test)
+    f1mi = f1_score(y_test, prediction, average='micro')
+    f1ma = f1_score(y_test, prediction, average='macro')
+    return {
         'micro_f1': f1mi,
         'macro_f1': f1ma
     }
